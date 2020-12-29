@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {
     Container,
     Divider,
@@ -44,6 +44,7 @@ function App() {
     const [percentInterestRate, setPercentInterestRate] = useState<number>(1.81);
     const [interval, setInterval] = useState<number>(30);
     const [monthlySavings, setMonthlySavings] = useState<number>(40000);
+    const [recalculatePayback, setRecalculatePayback] = useState<boolean>(true);
 
     const interestRate = percentInterestRate / 100;
     const monthlyInterestRate = interestRate / 12;
@@ -61,7 +62,7 @@ function App() {
         return (<Container className={classes.root}>
                 <Grid container direction="column" spacing={4}>
                     <Grid item>
-                        <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} />
+                        <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} recalculatePayback={recalculatePayback} setRecalculatePayback={setRecalculatePayback} />
                     </Grid>
                     <Grid item>
                         <Alert severity={"error"}>Měsíční úspory musí být stejné nebo vyšší než měsíční splátka</Alert>
@@ -78,17 +79,19 @@ function App() {
     let realPaybackCumulative = 0;
     let realPaybacksCount = 0;
     let currentSavings = 0;
+    let monthlyPayback = minimalMonthlyPayback;
     while (remainingAmount > 0 && realPaybacksCount < 360) {
         const monthlyInterest = remainingAmount * monthlyInterestRate;
-        currentSavings += monthlySavings - minimalMonthlyPayback;
+        currentSavings += monthlySavings - monthlyPayback;
         const month = realPaybacksCount % 12 + 1
         let extraPayback = 0;
         if (month === 12) {
             extraPayback = currentSavings;
             currentSavings = 0;
         }
-        const maxRealPayback = minimalMonthlyPayback + extraPayback - monthlyInterest;
+        const maxRealPayback = monthlyPayback + extraPayback - monthlyInterest;
         const realPayback = Math.min(maxRealPayback, remainingAmount);
+        const originalRemainingAmount = remainingAmount;
         remainingAmount = remainingAmount - realPayback;
         payedInterestCumulative = payedInterestCumulative + monthlyInterest;
         realPaybackCumulative = realPaybackCumulative + realPayback;
@@ -96,8 +99,8 @@ function App() {
             id: realPaybacksCount+1,
             year: Math.floor(realPaybacksCount / 12) + 1,
             month: month,
-            payback: Math.min(minimalMonthlyPayback, remainingAmount + realPayback),
-            extraPayback: Math.max(extraPayback, realPayback - minimalMonthlyPayback ),
+            payback: Math.min(monthlyPayback, remainingAmount + realPayback),
+            extraPayback: Math.min(extraPayback, originalRemainingAmount - monthlyPayback + monthlyInterest ),
             interest: monthlyInterest,
             realPayback: realPayback,
             remainingAmount: remainingAmount,
@@ -106,6 +109,17 @@ function App() {
             currentSavings: currentSavings,
         })
         realPaybacksCount = realPaybacksCount+1;
+        if (recalculatePayback && extraPayback > 0) {
+            const remainingPaybacksCount = interval * 12 - realPaybacksCount;
+            monthlyPayback = (
+                remainingAmount *
+                Math.pow(1 + monthlyInterestRate, remainingPaybacksCount) *
+                (
+                    monthlyInterestRate /
+                    (Math.pow(1 + monthlyInterestRate, remainingPaybacksCount) - 1)
+                )
+            )
+        }
     }
     const totalPayed = realPaybackCumulative + payedInterestCumulative;
     const totalInterest = payedInterestCumulative;
@@ -113,7 +127,7 @@ function App() {
         <Container className={classes.root}>
             <Grid container direction="column" spacing={4}>
                 <Grid item>
-                    <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} />
+                    <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} recalculatePayback={recalculatePayback} setRecalculatePayback={setRecalculatePayback}/>
                 </Grid>
                 <Grid item>
                     <Divider />
