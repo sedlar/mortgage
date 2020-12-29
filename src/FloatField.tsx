@@ -11,7 +11,7 @@ function formatNumber(value: number): string {
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 }
 
-export default function IntField({ value, setValue, ...props }: IntFieldProps & TextFieldProps) {
+export default function FloatField({ value, setValue, ...props }: IntFieldProps & TextFieldProps) {
     const [privateValue, setPrivateValue] = useState<string>(formatNumber(value));
     const [error, setError] = useState<boolean>(false);
     return (
@@ -19,7 +19,7 @@ export default function IntField({ value, setValue, ...props }: IntFieldProps & 
             value={privateValue}
             error={error}
             onChange={event => {
-                const enteredValue = parseInt(event.target.value.replaceAll(",", ""));
+                const enteredValue = parseFloat(event.target.value.replaceAll(",", ""));
                 setPrivateValue(formatNumber(enteredValue));
                 if (!isNaN(enteredValue)) {
                     setError(false);

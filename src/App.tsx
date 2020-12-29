@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Container,
     Divider,
@@ -11,14 +11,12 @@ import {
     TableRow,
     TextField
 } from "@material-ui/core";
-import IntField from "./IntField";
+import Form from "./Form"
+import {Alert} from "@material-ui/lab";
 
 const useStyles = makeStyles({
   root: {
     width: '100%',
-  },
-  container: {
-    maxHeight: 550,
   },
 });
 
@@ -31,11 +29,13 @@ interface CalendarRowProps {
     year: number
     month: number,
     payback: number,
+    extraPayback: number,
     interest: number,
     realPayback: number,
     remainingAmount: number,
     payedInterestCumulative: number,
     realPaybackCumulative: number
+    currentSavings: number;
 }
 
 function App() {
@@ -43,6 +43,7 @@ function App() {
     const [totalAmount, setTotalAmount] = useState<number>(4000000)
     const [percentInterestRate, setPercentInterestRate] = useState<number>(1.81);
     const [interval, setInterval] = useState<number>(30);
+    const [monthlySavings, setMonthlySavings] = useState<number>(40000);
 
     const interestRate = percentInterestRate / 100;
     const monthlyInterestRate = interestRate / 12;
@@ -55,64 +56,64 @@ function App() {
             (Math.pow(1 + monthlyInterestRate, paybacksCount) - 1)
         )
     )
-    const totalPayed = paybacksCount * minimalMonthlyPayback;
-    const totalInterest = totalPayed - totalAmount;
+
+    if (monthlySavings < minimalMonthlyPayback) {
+        return (<Container className={classes.root}>
+                <Grid container direction="column" spacing={4}>
+                    <Grid item>
+                        <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} />
+                    </Grid>
+                    <Grid item>
+                        <Alert severity={"error"}>Měsíční úspory musí být stejné nebo vyšší než měsíční splátka</Alert>
+                    </Grid>
+                </Grid>
+            </Container>
+        )
+    }
+
     const calendar: Array<CalendarRowProps> = []
 
     let remainingAmount = totalAmount;
     let payedInterestCumulative = 0;
     let realPaybackCumulative = 0;
-    for (let i = 0; i < paybacksCount; i++) {
+    let realPaybacksCount = 0;
+    let currentSavings = 0;
+    while (remainingAmount > 0 && realPaybacksCount < 360) {
         const monthlyInterest = remainingAmount * monthlyInterestRate;
-        const realPayback = minimalMonthlyPayback - monthlyInterest;
+        currentSavings += monthlySavings - minimalMonthlyPayback;
+        const month = realPaybacksCount % 12 + 1
+        let extraPayback = 0;
+        if (month === 12) {
+            extraPayback = currentSavings;
+            currentSavings = 0;
+        }
+        const maxRealPayback = minimalMonthlyPayback + extraPayback - monthlyInterest;
+        const realPayback = Math.min(maxRealPayback, remainingAmount);
         remainingAmount = remainingAmount - realPayback;
         payedInterestCumulative = payedInterestCumulative + monthlyInterest;
         realPaybackCumulative = realPaybackCumulative + realPayback;
         calendar.push({
-            id: i+1,
-            year: Math.floor(i / 12) + 1,
-            month: i % 12 + 1,
-            payback: minimalMonthlyPayback,
+            id: realPaybacksCount+1,
+            year: Math.floor(realPaybacksCount / 12) + 1,
+            month: month,
+            payback: Math.min(minimalMonthlyPayback, remainingAmount + realPayback),
+            extraPayback: Math.max(extraPayback, realPayback - minimalMonthlyPayback ),
             interest: monthlyInterest,
             realPayback: realPayback,
             remainingAmount: remainingAmount,
             payedInterestCumulative: payedInterestCumulative,
-            realPaybackCumulative: realPaybackCumulative
+            realPaybackCumulative: realPaybackCumulative,
+            currentSavings: currentSavings,
         })
+        realPaybacksCount = realPaybacksCount+1;
     }
+    const totalPayed = realPaybackCumulative + payedInterestCumulative;
+    const totalInterest = payedInterestCumulative;
     return (
         <Container className={classes.root}>
             <Grid container direction="column" spacing={4}>
                 <Grid item>
-                    <Grid container spacing={4}>
-                        <Grid item xs={12} md={6} lg={3}>
-                            <IntField
-                                label={"Výška úvěru"}
-                                variant={"outlined"}
-                                value={totalAmount}
-                                setValue={setTotalAmount}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={6} lg={3}>
-                            <IntField
-                                label={"Úroková míra"}
-                                variant={"outlined"}
-                                value={percentInterestRate}
-                                setValue={setPercentInterestRate}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={6} lg={3}>
-                            <IntField
-                                label={"Počet let splácení"}
-                                variant={"outlined"}
-                                value={interval}
-                                setValue={setInterval}
-                                fullWidth
-                            />
-                        </Grid>
-                    </Grid>
+                    <Form totalAmount={totalAmount} setTotalAmount={setTotalAmount} interval={interval} setInterval={setInterval} percentInterestRate={percentInterestRate} setPercentInterestRate={setPercentInterestRate} monthlySavings={monthlySavings} setMonthlySavings={setMonthlySavings} />
                 </Grid>
                 <Grid item>
                     <Divider />
@@ -131,7 +132,7 @@ function App() {
                             <TextField
                                 label={"Počet splátek"}
                                 variant={"outlined"}
-                                value={paybacksCount}
+                                value={realPaybacksCount}
                                 fullWidth
                             />
                         </Grid>
@@ -154,8 +155,8 @@ function App() {
                     </Grid>
                 </Grid>
                 <Grid item>
-                    <TableContainer component={Paper} className={classes.container}>
-                        <Table size={"small"} stickyHeader>
+                    <TableContainer component={Paper}>
+                        <Table size={"small"}>
                             <TableHead>
                                 <TableRow>
                                     <TableCell align={"right"}>
@@ -164,11 +165,13 @@ function App() {
                                     <TableCell align={"right"}>Rok úvěru</TableCell>
                                     <TableCell align={"right"}>Měsíc úvěru</TableCell>
                                     <TableCell align={"right"}>Splátka</TableCell>
+                                    <TableCell align={"right"}>Mimořádná splátka</TableCell>
                                     <TableCell align={"right"}>Úrok</TableCell>
                                     <TableCell align={"right"}>Úmor</TableCell>
                                     <TableCell align={"right"}>Úvěr (zůstatek)</TableCell>
                                     <TableCell align={"right"}>Splacený úrok kumulativně</TableCell>
                                     <TableCell align={"right"}>Úmor kumulativně</TableCell>
+                                    <TableCell align={"right"}>Aktuální úspory</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -180,11 +183,13 @@ function App() {
                                         <TableCell align={"right"}>{item.year}</TableCell>
                                         <TableCell align={"right"}>{item.month}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.payback)}</TableCell>
+                                        <TableCell align={"right"}>{formatNumber(item.extraPayback)}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.interest)}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.realPayback)}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.remainingAmount)}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.payedInterestCumulative)}</TableCell>
                                         <TableCell align={"right"}>{formatNumber(item.realPaybackCumulative)}</TableCell>
+                                        <TableCell align={"right"}>{formatNumber(item.currentSavings)}</TableCell>
                                     </TableRow>
                                 ))}
 
