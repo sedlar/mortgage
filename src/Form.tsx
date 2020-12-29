@@ -1,6 +1,7 @@
 import {Grid} from "@material-ui/core";
 import FloatField from "./FloatField";
 import React from "react";
+import IntField from "./IntField";
 
 interface FormProps {
     totalAmount: number,
@@ -25,7 +26,7 @@ export default function Form({
                              }: FormProps) {
     return (<Grid container spacing={4}>
         <Grid item xs={12} md={6} lg={3}>
-            <FloatField
+            <IntField
                 label={"Výška úvěru"}
                 variant={"outlined"}
                 value={totalAmount}
@@ -43,7 +44,7 @@ export default function Form({
             />
         </Grid>
         <Grid item xs={12} md={6} lg={3}>
-            <FloatField
+            <IntField
                 label={"Počet let splácení"}
                 variant={"outlined"}
                 value={interval}
@@ -52,7 +53,7 @@ export default function Form({
             />
         </Grid>
         <Grid item xs={12} md={6} lg={3}>
-            <FloatField
+            <IntField
                 label={"Měsíční úspory"}
                 variant={"outlined"}
                 value={monthlySavings}
