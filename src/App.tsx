@@ -23,7 +23,7 @@ const useStyles = makeStyles({
 });
 
 function formatNumber(value: number): string {
-    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 interface CalendarRowProps {

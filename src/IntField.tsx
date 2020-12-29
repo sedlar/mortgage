@@ -7,16 +7,20 @@ interface IntFieldProps {
     setValue: (value: number) => void;
 }
 
+function formatNumber(value: number): string {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+}
+
 export default function IntField({ value, setValue, ...props }: IntFieldProps & TextFieldProps) {
-    const [privateValue, setPrivateValue] = useState<string>(value.toString());
+    const [privateValue, setPrivateValue] = useState<string>(formatNumber(value));
     const [error, setError] = useState<boolean>(false);
     return (
         <TextField
             value={privateValue}
             error={error}
             onChange={event => {
-                setPrivateValue(event.target.value);
-                const enteredValue = parseInt(event.target.value);
+                const enteredValue = parseInt(event.target.value.replaceAll(",", ""));
+                setPrivateValue(formatNumber(enteredValue));
                 if (!isNaN(enteredValue)) {
                     setError(false);
                     setValue(enteredValue);
